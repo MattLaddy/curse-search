@@ -1,10 +1,10 @@
 {
-    "name": "vscode-extension-boilerplate",
-    "displayName": "VSCode extension boilerplate",
+    "name": "curse-search",
+    "displayName": "Curse Search",
     "version": "0.0.1",
     "preview": true,
-    "description": "An awesome boilerplate for VSCode extension development",
-    "publisher": "YuTengjing",
+    "description": "A VSCode extension for recursive function call searching",
+    "publisher": "MattLaddy",
     "icon": "images/logo.png",
     "license": "SEE LICENSE IN LICENSE",
     "main": "dist/extension.js",
@@ -21,54 +21,81 @@
         "prepare": "husky install"
     },
     "author": {
-        "name": "YuTengjing",
-        "url": "https://github.com/tjx666",
-        "email": "ytj2713151713@gmail.com"
+        "name": "MattLaddy"
     },
     "badges": [
         {
             "url": "https://img.shields.io/badge/License-MIT-brightgreen.svg",
             "description": "License: MIT",
-            "href": "https://github.com/tjx666/vscode-extension-boilerplate/blob/master/LICENSE"
+            "href": "https://github.com/mattladdy/curse-search/blob/master/LICENSE"
         },
         {
             "url": "https://img.shields.io/badge/PRs-welcome-brightgreen.svg",
             "description": "PRs Welcome",
-            "href": "https://github.com/tjx666/vscode-extension-boilerplate"
+            "href": "https://github.com/mattladdy/curse-search"
         }
     ],
-    "homepage": "https://github.com/tjx666/vscode-extension-boilerplate/blob/master/README.md",
+    "homepage": "https://github.com/mattladdy/curse-search/blob/master/README.md",
     "bugs": {
-        "url": "https://github.com/tjx666/vscode-extension-boilerplate/issues",
-        "email": "ytj2713151713@gmail.com"
+        "url": "https://github.com/mattladdy/curse-search/issues",
+        "email": "mattladdy@gmail.com"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/tjx666/vscode-extension-boilerplate"
+        "url": "https://github.com/mattladdy/curse-search"
     },
     "engines": {
         "vscode": "^1.73.0",
         "node": "^16.8.1"
     },
     "categories": [
+        "Programming Languages",
         "Other"
     ],
     "keywords": [
         "vscode",
-        "vscode-extension",
-        "vscode-extension-boilerplate",
-        "boilerplate"
+        "search",
+        "recursive",
+        "function",
+        "call graph"
     ],
     "activationEvents": [
-        "onCommand:VSCodeExtensionBoilerplate.helloVSCode"
+        "onCommand:CurseSearch.recursiveSearch"
     ],
     "contributes": {
         "commands": [
             {
-                "command": "VSCodeExtensionBoilerplate.helloVSCode",
-                "title": "Hello Visual Studio Code!"
+                "command": "CurseSearch.recursiveSearch",
+                "title": "Recursive Function Search"
             }
-        ]
+        ],
+        "menus": {
+            "editor/context": [
+                {
+                    "when": "editorHasSelection",
+                    "command": "CurseSearch.recursiveSearch",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "curse-search",
+                    "title": "Curse Search",
+                    "icon": "images/logo.png"
+                }
+            ]
+        },
+        "views": {
+            "curse-search": [
+                {
+                    "id": "curseSearch.resultsView",
+                    "name": "Search Results",
+                    "type": "webview"
+                }
+            ]
+        }
     },
     "lint-staged": {
         "*.ts": [
@@ -79,8 +106,14 @@
             "prettier --write"
         ]
     },
+    "dependencies": {
+        "@babel/parser": "^7.22.5",
+        "@babel/traverse": "^7.22.5",
+        "@babel/types": "^7.22.5"
+    },
     "devDependencies": {
         "@nuxt/friendly-errors-webpack-plugin": "^2.5.2",
+        "@types/babel__traverse": "^7.20.1",
         "@types/glob": "^8.0.0",
         "@types/mocha": "^10.0.0",
         "@types/node": "^16.18.3",

@@ -1,12 +1,22 @@
 import * as vscode from 'vscode';
-
-import helloWorld from './helloWorld';
+import { recursiveSearch } from './recursiveSearch';
+import { SearchResultsViewProvider } from './searchResultsView';
 
 export function activate(context: vscode.ExtensionContext): void {
+    // Register search results view provider
+    const searchResultsViewProvider = new SearchResultsViewProvider(context.extensionUri);
     context.subscriptions.push(
-        vscode.commands.registerCommand('VSCodeExtensionBoilerplate.helloVSCode', () =>
-            helloWorld(),
-        ),
+        vscode.window.registerWebviewViewProvider(
+            SearchResultsViewProvider.viewType, 
+            searchResultsViewProvider
+        )
+    );
+
+    // Register command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('CurseSearch.recursiveSearch', () =>
+            recursiveSearch(searchResultsViewProvider),
+        )
     );
 }
 
