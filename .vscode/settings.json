@@ -1,11 +1,12 @@
 {
-    "typescript.tsdk": "./node_modules/typescript/lib",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
     "search.exclude": {
         "**/node_modules": true,
-        "out": true,
-        "test-workspace": true,
-        ".vscode-test": true,
-        "**/*.lock": true
+        "**/dist": true
     },
     "files.watcherExclude": {
         "**/.git/objects/**": true,

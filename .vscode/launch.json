@@ -9,33 +9,13 @@
             "name": "Run Extension",
             "type": "extensionHost",
             "request": "launch",
-            "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
-            "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-            "skipFiles": [
-                "<node_internals>/**",
-                "**/node_modules/**",
-                "**/Resources/app/out/vs/**"
-            ],
-            "sourceMaps": true,
-            "preLaunchTask": "${defaultBuildTask}"
-        },
-        {
-            "name": "Extension Tests",
-            "type": "extensionHost",
-            "request": "launch",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/dist/test",
-                "${workspaceFolder}/test-workspace"
+                "--extensionDevelopmentPath=${workspaceFolder}"
             ],
-            "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-            "skipFiles": [
-                "<node_internals>/**",
-                "**/node_modules/**",
-                "**/Resources/app/out/vs/**"
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
             ],
-            "sourceMaps": true,
-            "preLaunchTask": "tasks: watch-tests"
+            "preLaunchTask": "${defaultBuildTask}"
         }
     ]
 }

@@ -1,27 +1,30 @@
-node_modules/
+.vscode/**
+.vscode-test/**
+node_modules/**
+src/**
+test-workspace/**
+.gitignore
+.eslintrc.json
+tsconfig.json
+**/*.map
+**/*.ts
+**/*.vsix
 
 # develop
 .vscode/
 typings/
 configs/
 scripts/
-src/
 
 # test and output
-.vscode-test/
 test/
 out/test/
-test-workspace/
 .nyc_output/
 coverage/
 
 # configs
-.gitignore
 .vscodeignore
-tsconfig.json
-tsconfig.test.json
 .nvmrc
-.eslintrc.js
 .eslintignore
 .prettierrc
 yarn.lock

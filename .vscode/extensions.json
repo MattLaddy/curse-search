@@ -2,10 +2,7 @@
 {
     "recommendations": [
         "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "yutengjing.open-in-external-app",
-        "yutengjing.vscode-fe-helper",
-        "amodio.tsl-problem-matcher"
+        "ms-vscode.vscode-typescript-next"
     ],
     "unwantedRecommendations": [
         "hookyqr.beautify",
