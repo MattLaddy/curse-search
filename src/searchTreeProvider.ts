@@ -10,6 +10,7 @@ export class SearchResultItem extends vscode.TreeItem {
         public readonly contextValue?: string
     ) {
         super(label, collapsibleState);
+        this.contextValue = contextValue;
     }
 }
 
@@ -20,9 +21,11 @@ export class FunctionResultItem extends SearchResultItem {
     ) {
         super(
             `${functionName} (${count})`,
-            vscode.TreeItemCollapsibleState.Expanded
+            vscode.TreeItemCollapsibleState.Expanded,
+            undefined,
+            undefined,
+            'function'
         );
-        this.contextValue = 'function';
         this.iconPath = new vscode.ThemeIcon('symbol-function');
     }
 }
@@ -43,9 +46,9 @@ export class LineResultItem extends SearchResultItem {
                 command: 'curseSearch.revealLine',
                 title: 'Go to Line',
                 arguments: [resourceUri, range]
-            }
+            },
+            'line'
         );
-        this.contextValue = 'line';
         
         // Different icon based on whether it's in selection or not
         this.iconPath = isInSelection 

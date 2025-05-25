@@ -184,6 +184,94 @@ function findTransitiveCalls(callGraph: Map<string, Set<string>>, targetFunction
 }
 
 /**
+ * Extract potential imported functions from require/import statements
+ * @param code The source code to analyze
+ * @returns A map of local names to imported functions
+ */
+function extractImportedFunctions(code: string): Map<string, string> {
+    const importedFunctions = new Map<string, string>();
+    
+    try {
+        // Parse the code using Babel
+        const ast = parser.parse(code, {
+            sourceType: 'module',
+            plugins: ['typescript', 'jsx'],
+        });
+        
+        // Traverse the AST to find imports
+        traverse(ast, {
+            // Handle CommonJS require statements
+            VariableDeclarator(path) {
+                if (path.node.init?.type === 'CallExpression' &&
+                    path.node.init.callee.type === 'Identifier' &&
+                    path.node.init.callee.name === 'require') {
+                    
+                    // Handle destructuring requires: const { func1, func2 } = require('./module')
+                    if (path.node.id.type === 'ObjectPattern') {
+                        for (const prop of path.node.id.properties) {
+                            if (prop.type === 'ObjectProperty' && 
+                                prop.key.type === 'Identifier' && 
+                                prop.value.type === 'Identifier') {
+                                importedFunctions.set(prop.value.name, prop.key.name);
+                            }
+                        }
+                    }
+                    
+                    // Handle direct requires: const module = require('./module')
+                    if (path.node.id.type === 'Identifier') {
+                        const moduleName = path.node.id.name;
+                        
+                        // Find where the module is used like: module.function()
+                        path.scope.bindings[moduleName]?.referencePaths.forEach(refPath => {
+                            const parent = refPath.parent;
+                            if (parent.type === 'MemberExpression' && 
+                                parent.property.type === 'Identifier') {
+                                const importedName = parent.property.name;
+                                importedFunctions.set(`${moduleName}.${importedName}`, importedName);
+                            }
+                        });
+                    }
+                }
+            },
+            
+            // Handle ES6 import statements
+            ImportDeclaration(path) {
+                // Handle named imports: import { func1, func2 } from './module'
+                path.node.specifiers.forEach(specifier => {
+                    if (specifier.type === 'ImportSpecifier' &&
+                        specifier.imported.type === 'Identifier' &&
+                        specifier.local.type === 'Identifier') {
+                        importedFunctions.set(specifier.local.name, specifier.imported.name);
+                    }
+                });
+                
+                // Handle default imports: import module from './module'
+                path.node.specifiers.forEach(specifier => {
+                    if (specifier.type === 'ImportDefaultSpecifier' &&
+                        specifier.local.type === 'Identifier') {
+                        const moduleName = specifier.local.name;
+                        
+                        // Similar to require case, track module.function usage
+                        path.scope.bindings[moduleName]?.referencePaths.forEach(refPath => {
+                            const parent = refPath.parent;
+                            if (parent.type === 'MemberExpression' && 
+                                parent.property.type === 'Identifier') {
+                                const importedName = parent.property.name;
+                                importedFunctions.set(`${moduleName}.${importedName}`, importedName);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Error extracting imports:', error);
+    }
+    
+    return importedFunctions;
+}
+
+/**
  * Find all functions that the target function directly or indirectly calls
  */
 function findNestedCalls(callGraph: Map<string, Set<string>>, targetFunction: string): Set<string> {
@@ -292,6 +380,9 @@ export async function recursiveSearch(resultsViewProvider: SearchResultsViewProv
     // Build the call graph from the entire file
     const { callGraph, functionInfoMap } = buildCallGraph(entireDocumentText);
     
+    // Extract imported functions
+    const importedFunctions = extractImportedFunctions(entireDocumentText);
+    
     // Find all functions in the selected text - improved detection
     const selectedFunctions = new Set<string>();
     
@@ -303,12 +394,32 @@ export async function recursiveSearch(resultsViewProvider: SearchResultsViewProv
     }
     
     // Detect function calls within the selection
-    const functionCallRegex = /\b([a-zA-Z0-9_$]+)\s*\(/g;
+    const functionCallRegex = /\b([a-zA-Z0-9_$.]+)(?:\.[a-zA-Z0-9_$]+)?\s*\(/g;
     while ((match = functionCallRegex.exec(selectedText)) !== null) {
         const potentialFunctionName = match[1];
-        // Check if this is a function that exists in our function map
+        
+        // Check for direct function calls
         if (functionInfoMap.has(potentialFunctionName)) {
             selectedFunctions.add(potentialFunctionName);
+        }
+        
+        // Check for imported functions
+        if (importedFunctions.has(potentialFunctionName)) {
+            const originalName = importedFunctions.get(potentialFunctionName);
+            if (originalName) {
+                // Add a comment to indicate it's an imported function
+                const importNote = `Imported as ${potentialFunctionName}`;
+                // ... handle imported function search ...
+            }
+        }
+        
+        // Check for method calls on imported modules
+        const methodCallMatch = potentialFunctionName.match(/^([a-zA-Z0-9_$]+)\.([a-zA-Z0-9_$]+)$/);
+        if (methodCallMatch) {
+            const moduleName = methodCallMatch[1];
+            const methodName = methodCallMatch[2];
+            
+            // ... handle module method calls ...
         }
     }
 

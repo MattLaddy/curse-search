@@ -4,7 +4,7 @@
     "version": "0.0.1",
     "description": "A VSCode extension for recursive function call searching",
     "publisher": "MattLaddy",
-    "icon": "images/logo.png",
+    "icon": "images/logo.svg",
     "license": "MIT",
     "main": "dist/extension.js",
     "scripts": {
@@ -64,7 +64,7 @@
                 {
                     "id": "curse-search",
                     "title": "Curse Search",
-                    "icon": "images/logo.png"
+                    "icon": "images/logo.svg"
                 }
             ]
         },
@@ -74,15 +74,13 @@
                     "id": "curseSearch.resultsView",
                     "name": "Search Results",
                     "type": "webview"
-                }
-            ],
-            "explorer": [
+                },
                 {
                     "id": "curseSearchResults",
-                    "name": "Curse Search Results",
-                    "when": "resourceLangId && resourceLangId =~ /javascript|typescript|typescriptreact|javascriptreact/"
+                    "name": "Search Results Tree"
                 }
-            ]
+            ],
+            "explorer": []
         }
     },
     "dependencies": {
