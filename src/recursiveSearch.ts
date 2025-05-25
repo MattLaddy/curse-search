@@ -106,11 +106,29 @@ function buildCallGraph(code: string): {
             
             // Track function calls within functions
             CallExpression(path) {
-                if (currentFunction && path.node.callee.type === 'Identifier') {
-                    const calledFunction = path.node.callee.name;
-                    const currentFunctionCalls = callGraph.get(currentFunction);
-                    if (currentFunctionCalls) {
-                        currentFunctionCalls.add(calledFunction);
+                if (currentFunction) {
+                    let calledFunction = '';
+                    
+                    // Handle direct identifier calls: functionName()
+                    if (path.node.callee.type === 'Identifier') {
+                        calledFunction = path.node.callee.name;
+                    } 
+                    // Handle member expression calls: object.method()
+                    else if (path.node.callee.type === 'MemberExpression' && 
+                            path.node.callee.property.type === 'Identifier') {
+                        calledFunction = path.node.callee.property.name;
+                    }
+                    
+                    if (calledFunction && calledFunction !== '') {
+                        const currentFunctionCalls = callGraph.get(currentFunction);
+                        if (currentFunctionCalls) {
+                            currentFunctionCalls.add(calledFunction);
+                            
+                            // Create entry for the called function if it doesn't exist yet
+                            if (!callGraph.has(calledFunction)) {
+                                callGraph.set(calledFunction, new Set<string>());
+                            }
+                        }
                     }
                 }
             },
@@ -221,14 +239,34 @@ function getTextLineForMatch(text: string, index: number, matchLength: number, m
     return line.trim();
 }
 
+// Find the containing function for a position
+function findContainingFunction(position: number, functionInfoMap: Map<string, FunctionInfo>): string {
+    let containingFunction = 'Unknown';
+    let bestMatchLength = Number.MAX_SAFE_INTEGER;
+    
+    for (const [funcName, funcInfo] of functionInfoMap.entries()) {
+        if (position >= funcInfo.startPos && position <= funcInfo.endPos) {
+            // If multiple functions contain this position (nested functions),
+            // use the one with the smallest scope
+            const functionLength = funcInfo.endPos - funcInfo.startPos;
+            if (functionLength < bestMatchLength) {
+                bestMatchLength = functionLength;
+                containingFunction = funcName;
+            }
+        }
+    }
+    
+    return containingFunction;
+}
+
 /**
  * Main recursive search function
  */
-export async function recursiveSearch(resultsViewProvider: SearchResultsViewProvider) {
+export async function recursiveSearch(resultsViewProvider: SearchResultsViewProvider): Promise<{ searchTerm: string, results: SearchResult[] } | undefined> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showErrorMessage('No active editor!');
-        return;
+        return undefined;
     }
     
     // Get the selected text and entire document text
@@ -238,7 +276,7 @@ export async function recursiveSearch(resultsViewProvider: SearchResultsViewProv
     
     if (!selectedText) {
         vscode.window.showErrorMessage('No text selected!');
-        return;
+        return undefined;
     }
     
     // Ask the user for the function or variable to search for
@@ -248,28 +286,62 @@ export async function recursiveSearch(resultsViewProvider: SearchResultsViewProv
     });
     
     if (!searchTarget) {
-        return;
+        return undefined;
     }
     
     // Build the call graph from the entire file
     const { callGraph, functionInfoMap } = buildCallGraph(entireDocumentText);
     
-    // Find all functions that the selected functions call (directly or indirectly)
+    // Find all functions in the selected text - improved detection
     const selectedFunctions = new Set<string>();
-    const selectedFunctionRegex = /function\s+([a-zA-Z0-9_$]+)\s*\(/g;
-    let match;
     
-    while ((match = selectedFunctionRegex.exec(selectedText)) !== null) {
+    // Detect traditional function declarations
+    const traditionalFuncRegex = /function\s+([a-zA-Z0-9_$]+)\s*\(/g;
+    let match;
+    while ((match = traditionalFuncRegex.exec(selectedText)) !== null) {
         selectedFunctions.add(match[1]);
+    }
+    
+    // Detect function calls within the selection
+    const functionCallRegex = /\b([a-zA-Z0-9_$]+)\s*\(/g;
+    while ((match = functionCallRegex.exec(selectedText)) !== null) {
+        const potentialFunctionName = match[1];
+        // Check if this is a function that exists in our function map
+        if (functionInfoMap.has(potentialFunctionName)) {
+            selectedFunctions.add(potentialFunctionName);
+        }
+    }
+
+    // Detect variable assignments with function expressions
+    const varFuncRegex = /\b(const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:function|\(.*\)\s*=>)/g;
+    while ((match = varFuncRegex.exec(selectedText)) !== null) {
+        selectedFunctions.add(match[2]);
     }
     
     // For each selected function, find all its nested calls
     const relevantFunctions = new Set<string>();
     for (const func of selectedFunctions) {
         relevantFunctions.add(func);
+        
+        // Find direct and indirect calls
         const nestedCalls = findNestedCalls(callGraph, func);
         for (const nestedCall of nestedCalls) {
             relevantFunctions.add(nestedCall);
+        }
+        
+        // Explicitly check for any functions called directly in the selected text
+        const directCallRegex = new RegExp(`\\b${func}\\s*\\(.*\\).*\\{[\\s\\S]*?\\b([a-zA-Z0-9_$]+)\\s*\\(`, 'g');
+        while ((match = directCallRegex.exec(selectedText)) !== null) {
+            const calledFunc = match[1];
+            if (functionInfoMap.has(calledFunc)) {
+                relevantFunctions.add(calledFunc);
+                
+                // Also add functions that this called function calls
+                const secondaryNestedCalls = findNestedCalls(callGraph, calledFunc);
+                for (const secondaryCall of secondaryNestedCalls) {
+                    relevantFunctions.add(secondaryCall);
+                }
+            }
         }
     }
     
@@ -295,14 +367,9 @@ export async function recursiveSearch(resultsViewProvider: SearchResultsViewProv
         
         decorations.push({ range });
         
-        // Find the containing function
-        let containingFunction = 'Unknown';
-        for (const [funcName, funcInfo] of functionInfoMap.entries()) {
-            if (selectedText.includes(funcName) && selectedFunctions.has(funcName)) {
-                containingFunction = funcName;
-                break;
-            }
-        }
+        // Find the containing function using improved detection
+        const absoluteMatchPosition = selectionStartOffset + searchMatch.index;
+        const containingFunction = findContainingFunction(absoluteMatchPosition, functionInfoMap);
         
         searchResults.push({
             text: getTextLineForMatch(selectedText, searchMatch.index, searchMatch[0].length),
@@ -351,4 +418,10 @@ export async function recursiveSearch(resultsViewProvider: SearchResultsViewProv
     vscode.window.showInformationMessage(
         `Found ${decorations.length} matches for "${searchTarget}" in selected and related functions`
     );
+    
+    // Return the results for the tree view
+    return {
+        searchTerm: searchTarget,
+        results: searchResults
+    };
 } 

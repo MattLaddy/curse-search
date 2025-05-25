@@ -44,6 +44,10 @@
             {
                 "command": "CurseSearch.recursiveSearch",
                 "title": "Recursive Function Search"
+            },
+            {
+                "command": "curseSearch.revealLine",
+                "title": "Go to Line"
             }
         ],
         "menus": {
@@ -70,6 +74,13 @@
                     "id": "curseSearch.resultsView",
                     "name": "Search Results",
                     "type": "webview"
+                }
+            ],
+            "explorer": [
+                {
+                    "id": "curseSearchResults",
+                    "name": "Curse Search Results",
+                    "when": "resourceLangId && resourceLangId =~ /javascript|typescript|typescriptreact|javascriptreact/"
                 }
             ]
         }
